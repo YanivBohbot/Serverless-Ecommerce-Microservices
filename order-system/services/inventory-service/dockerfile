@@ -1,0 +1,21 @@
+# 1. שימוש ב-Node.js גרסה 20
+FROM node:20-alpine
+
+# 2. הגדרת תיקיית העבודה בתוך הקונטיינר
+WORKDIR /usr/src/app
+
+# 3. העתקת קבצי החבילות והתקנתן
+COPY package*.json ./
+RUN npm install
+
+# 4. העתקת כל שאר הקוד (כולל תיקיית src)
+COPY . .
+
+# 5. בניית קוד ה-TypeScript ל-JavaScript (תיקיית dist)
+RUN npm run build
+
+# 6. חשיפת הפורט של שירות המלאי
+EXPOSE 3002
+
+# 7. פקודת ההרצה של השירות
+CMD ["npm", "start"]
