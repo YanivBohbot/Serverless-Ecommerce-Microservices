@@ -1,7 +1,7 @@
 import AWS from "aws-sdk";
 
 const sns = new AWS.SNS({ region: process.env.AWS_REGION || "us-east-1" });
-
+  process
 export const publishOrderCreated = async (orderData: any) => {
   const params = {
     Message: JSON.stringify(orderData),
