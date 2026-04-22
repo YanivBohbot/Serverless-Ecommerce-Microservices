@@ -12,6 +12,8 @@ services:
       POSTGRES_DB: orders_final_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:           
+      - app-network
 
   order-service:
     build: ./order-service
@@ -22,8 +24,12 @@ services:
       - PORT=3001
       # חשוב: כאן אנחנו משתמשים בשם של ה-service בתוך הרשת של דוקר
       - DATABASE_URL=postgres://admin_yaniv:password123@postgres-db:5432/orders_final_db
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}         # הוספה: כדי שיוכל לשלוח ל-SNS
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} # הוספה
     depends_on:
       - postgres-db
+    networks:           
+      - app-network
 
   inventory-service:
     build: ./inventory-service # וודא שבתוך התיקייה הזו יש קובץ בשם Dockerfile
@@ -34,7 +40,49 @@ services:
       - ./inventory-service/.env
     environment:
       - PORT=3002
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}         # הוספה
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} # הוספה
+    networks:          
+      - app-network
 
-  
+  notification_service:
+    build: ./notification-service
+    container_name: notification_service_app
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=us-east-1
+      - NOTIFICATION_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/584246028688/notification-queue
+    depends_on:
+      - order-service
+      - inventory-service
+    networks:
+      - app-network
+
+
+  intelligence_service:
+    build: ./intelligence-service
+    container_name: intelligence_service_app
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - DATABASE_URL=postgres://admin_yaniv:password123@postgres-db:5432/orders_final_db
+    depends_on:
+      - postgres-db
+    networks:
+      - app-network
+
+
+
+
+
+
 volumes:
   postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
