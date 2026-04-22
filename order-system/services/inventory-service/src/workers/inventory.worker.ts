@@ -1,5 +1,6 @@
 import AWS from "aws-sdk";
 import { InventoryService } from "../services/inventory.services";
+import { publishInventoryEvent } from "../events/inventory-publisher";
 
 // הגדרת ה-SQS Client
 const sqs = new AWS.SQS({ region: process.env.AWS_REGION || "us-east-1" });
@@ -25,6 +26,8 @@ export const startInventoryWorker = async () => {
       const data = await sqs.receiveMessage(params).promise();
 
       if (data.Messages && data.Messages.length > 0) {
+        let orderId = null;
+
         for (const message of data.Messages) {
           try {
             // 1. פירוק המעטפת של SQS ו-SNS
@@ -39,7 +42,9 @@ export const startInventoryWorker = async () => {
             console.log(
               `📩 New message received for Order #${orderData.id || "Unknown"}`,
             );
+            orderId = orderData.id;
 
+            console.log(`📩 Processing Order #${orderId}`);
             // 2. טיפול במבנה של "סל קניות" (מערך של items)
             if (
               orderData &&
@@ -61,6 +66,11 @@ export const startInventoryWorker = async () => {
                   );
                 }
               }
+
+              await publishInventoryEvent(orderId, "COMPLETED");
+              console.log(
+                `✅ Order #${orderId} inventory updated and confirmed.`,
+              );
             }
             // 3. תמיכה לאחור במבנה של מוצר בודד (למקרה של בדיקות ידניות)
             else if (orderData && orderData.productId) {
@@ -87,9 +97,14 @@ export const startInventoryWorker = async () => {
               .promise();
 
             console.log("✅ Message processed and deleted from queue");
-          } catch (innerError) {
-            console.error("❌ Failed to process specific message:", innerError);
-            // מוחקים הודעה "מקולקלת" מהתור כדי שלא תחסום את העבודה
+          } catch (error: any) {
+            console.error(
+              "❌ Error processing Order #${orderId}:`, error.message",
+            );
+            if (orderId) {
+              await publishInventoryEvent(orderId, "FAILED");
+            }
+            // מוחקים מהתור כדי לא להיתקע, ה-Saga תטפל בביטול
             await sqs
               .deleteMessage({
                 QueueUrl: QUEUE_URL,
