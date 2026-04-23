@@ -1,38 +1,61 @@
-name: Deploy to Amazon ECR
+name: Production CI/CD
 
 on:
   push:
-    branches: [ "main" ] # ה-Pipeline ירוץ בכל פעם שתדחוף למיין
+    branches: [ main ]
+    paths:
+      - 'services/**' # ירוץ רק כשמשהו בתיקיית השירותים משתנה
 
 jobs:
-  deploy:
-    name: Build and Push
+  detect-changes:
     runs-on: ubuntu-latest
-
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            order-service: 'services/order-service/**'
+            inventory-service: 'services/inventory-service/**'
+            intelligence-service: 'services/intelligence-service/**'
+            notification-service: 'services/notification-service/**'
+            payment-service: 'services/payment-service/**'
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+  build-and-deploy:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.services != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    - name: Build, tag, and push image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: intelligence-service
-        IMAGE_TAG: ${{ github.sha }} # משתמשים ב-Hash של ה-commit כגרסה
-      run: |
-        # בנייה של הקונטיינר הספציפי
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./services/intelligence-service
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        # עדכון ה-Tag ל-latest
-        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          SERVICE_NAME: ${{ matrix.service }}
+        run: |
+          docker build -t $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} ./services/$SERVICE_NAME
+          docker push $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }}
+          docker tag $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} $ECR_REGISTRY/$SERVICE_NAME:latest
+          docker push $ECR_REGISTRY/$SERVICE_NAME:latest
+
+      - name: Update ECS Service
+        run: |
+          aws ecs update-service --cluster yaniv-main-cluster --service ${{ matrix.service }} --force-new-deployment
