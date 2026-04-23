@@ -21,6 +21,6 @@ export const publishInventoryEvent = async (
       `📢 Inventory status for Order #${orderId} published: ${status}`,
     );
   } catch (error) {
-    console.error("❌ Failed to publish inventory update:", error);
+    console.error("❌ Failed   to publish inventory update:", error);
   }
 };
