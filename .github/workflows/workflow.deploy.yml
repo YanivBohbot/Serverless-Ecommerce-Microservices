@@ -17,11 +17,11 @@ jobs:
         id: filter
         with:
           filters: |
-            order-service: 'services/order-service/**'
-            inventory-service: 'services/inventory-service/**'
-            intelligence-service: 'services/intelligence-service/**'
-            notification-service: 'services/notification-service/**'
-            payment-service: 'services/payment-service/**'
+            order-service: 'order-system/services/order-service/**'
+            inventory-service: 'order-system/services/inventory-service/**'
+            intelligence-service: 'order-system/services/intelligence-service/**'
+            notification-service: 'order-system/services/notification-service/**'
+            payment-service: 'order-system/services/payment-service/**'
 
   build-and-deploy:
     needs: detect-changes
