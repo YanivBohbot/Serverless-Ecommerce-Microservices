@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'services/**' # ירוץ רק כשמשהו בתיקיית השירותים משתנה
+      - 'services/***' # ירוץ רק כשמשהו בתיקיית השירותים משתנה
 
 jobs:
   detect-changes:
