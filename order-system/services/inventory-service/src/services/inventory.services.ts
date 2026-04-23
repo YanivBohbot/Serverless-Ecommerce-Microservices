@@ -7,7 +7,7 @@ export class InventoryService {
       Key: {
         productId,
       },
-      UpdateExpression: "SET stock = if_not_exists(stock, :start) - :val",
+      UpdateExpression: "SET  stock = if_not_exists(stock, :start) - :val",
       ExpressionAttributeValues: {
         ":val": quantityChange,
         ":start": 100,
