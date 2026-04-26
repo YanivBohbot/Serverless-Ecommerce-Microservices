@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'order-system/services/**' # ירוץ רק כשמשהו בתיקיית השירותים משתנה
+      - 'order-system/services/**'
 
 jobs:
   detect-changes:
@@ -21,7 +21,6 @@ jobs:
             inventory-service: 'order-system/services/inventory-service/**'
             intelligence-service: 'order-system/services/intelligence-service/**'
             notification-service: 'order-system/services/notification-service/**'
-            payment-service: 'order-system/services/payment-service/**'
 
   build-and-deploy:
     needs: detect-changes
@@ -40,25 +39,19 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, Tag and Push Image
+      - name: Build and Push Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SERVICE_NAME: ${{ matrix.service }}
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          # שים לב לנתיב המלא מהשורש: ./order-system/services/
+          # הנתיב הקריטי:
           docker build -t $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} ./order-system/services/$SERVICE_NAME
-          
-          docker push $ECR_REGISTRY/$SERVICE_NAME:$IMAGE_TAG
-          docker tag $ECR_REGISTRY/$SERVICE_NAME:$IMAGE_TAG $ECR_REGISTRY/$SERVICE_NAME:latest
+          docker push $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }}
+          docker tag $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} $ECR_REGISTRY/$SERVICE_NAME:latest
           docker push $ECR_REGISTRY/$SERVICE_NAME:latest
-
-      - name: Update ECS Service
-        run: |
-          aws ecs update-service --cluster yaniv-main-cluster --service ${{ matrix.service }} --force-new-deployment
