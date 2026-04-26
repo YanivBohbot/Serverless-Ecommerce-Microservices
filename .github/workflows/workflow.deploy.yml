@@ -58,7 +58,6 @@ jobs:
           docker push $ECR_REGISTRY/$SERVICE_NAME:$IMAGE_TAG
           docker tag $ECR_REGISTRY/$SERVICE_NAME:$IMAGE_TAG $ECR_REGISTRY/$SERVICE_NAME:latest
           docker push $ECR_REGISTRY/$SERVICE_NAME:latest
-       
 
       - name: Update ECS Service
         run: |
