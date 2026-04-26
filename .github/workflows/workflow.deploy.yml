@@ -1,10 +1,10 @@
-name: Production CI/CD
+name: Microservices Production CI/CD
 
 on:
   push:
     branches: [ main ]
     paths:
-      - 'order-system/services/**'
+      - 'order-system/services/**' # ירוץ רק כשמשתנה קוד בשירותים
 
 jobs:
   detect-changes:
@@ -12,7 +12,7 @@ jobs:
     outputs:
       services: ${{ steps.filter.outputs.changes }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v2
         id: filter
         with:
@@ -21,6 +21,7 @@ jobs:
             inventory-service: 'order-system/services/inventory-service/**'
             intelligence-service: 'order-system/services/intelligence-service/**'
             notification-service: 'order-system/services/notification-service/**'
+            payment-service: 'order-system/services/payment-service/**'
 
   build-and-deploy:
     needs: detect-changes
@@ -28,11 +29,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        # יבנה במקביל רק את השירותים שהשתנו
         service: ${{ fromJSON(needs.detect-changes.outputs.services) }}
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -50,7 +52,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SERVICE_NAME: ${{ matrix.service }}
         run: |
-          # הנתיב הקריטי:
+          # כאן התיקון הקריטי של הנתיב
           docker build -t $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} ./order-system/services/$SERVICE_NAME
           docker push $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }}
           docker tag $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} $ECR_REGISTRY/$SERVICE_NAME:latest
