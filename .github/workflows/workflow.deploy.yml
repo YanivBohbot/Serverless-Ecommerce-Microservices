@@ -51,7 +51,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SERVICE_NAME: ${{ matrix.service }}
         run: |
-          docker build -t $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} ./services/$SERVICE_NAME
+          docker build -t $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} ./order-system/services/$SERVICE_NAME
           docker push $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }}
           docker tag $ECR_REGISTRY/$SERVICE_NAME:${{ github.sha }} $ECR_REGISTRY/$SERVICE_NAME:latest
           docker push $ECR_REGISTRY/$SERVICE_NAME:latest
