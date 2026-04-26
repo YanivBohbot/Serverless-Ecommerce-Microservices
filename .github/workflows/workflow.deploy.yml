@@ -46,16 +46,19 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and Push Image
+      - name: Build, Tag and Push Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           SERVICE_NAME: ${{ matrix.service }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          # שים לב לנתיב המלא מהשורש: ./order-system/services/
           docker build -t $ECR_REGISTRY/$SERVICE_NAME:$IMAGE_TAG ./order-system/services/$SERVICE_NAME
+          
           docker push $ECR_REGISTRY/$SERVICE_NAME:$IMAGE_TAG
           docker tag $ECR_REGISTRY/$SERVICE_NAME:$IMAGE_TAG $ECR_REGISTRY/$SERVICE_NAME:latest
           docker push $ECR_REGISTRY/$SERVICE_NAME:latest
+       
 
       - name: Update ECS Service
         run: |
