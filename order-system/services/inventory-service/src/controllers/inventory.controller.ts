@@ -25,7 +25,10 @@ export const updateStockHandler = async (req: Request, res: Response) => {
 
     const id = Array.isArray(productId) ? productId[0] : productId;
     const result = await InventoryService.updateInventory(id, quantity);
-    res.json({ message: "Stock updated successfully", newValues: result });
+    res.json({
+      message: "Stock updated successfully youpiii",
+      newValues: result,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
