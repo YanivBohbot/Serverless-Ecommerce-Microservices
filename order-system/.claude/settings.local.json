@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(docker context use *)",
+      "Bash(docker-compose down *)",
+      "Bash(powershell *)",
+      "Bash(start *)",
+      "Bash(docker-compose up *)",
+      "Bash(curl -s http://localhost:3001/orders/21)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -v http://localhost:3001/orders)",
+      "Bash(docker restart notification_service_app *)",
+      "Bash(curl -s -X POST http://localhost:3001/orders -H 'Content-Type: application/json' -d '{\"customerId\": 1, \"items\": [{\"productId\": \"prod-001\", \"price\": 29.99, \"quantity\": 1}]}')"
+    ]
+  }
+}

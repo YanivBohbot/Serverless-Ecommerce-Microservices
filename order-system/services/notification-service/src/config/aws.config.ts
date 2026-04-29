@@ -6,8 +6,8 @@ export const config = {
   sqs: {
     queueUrl: process.env.NOTIFICATION_QUEUE_URL || "",
   },
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  ses: {
+    fromEmail: process.env.SES_FROM_EMAIL || "yanivbohbot5@gmail.com",
+    toEmail: process.env.SES_TO_EMAIL || "mollokapi1@gmail.com",
   },
 };

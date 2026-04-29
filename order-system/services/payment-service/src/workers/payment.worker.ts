@@ -4,10 +4,11 @@ import {
   DeleteMessageCommand,
 } from "@aws-sdk/client-sqs";
 import { config } from "../config/aws.config";
-import { EmailProvider } from "../providers/email.provider";
+import { PaymentService } from "../services/payment.service";
+import { publishPaymentProcessed } from "../events/payment.publisher";
+import { OrderCreatedPayload } from "../types/payment.type";
 
 const sqsClient = new SQSClient({ region: config.region });
-const emailProvider = new EmailProvider();
 
 let running = true;
 
@@ -21,8 +22,8 @@ process.on("SIGINT", () => {
   running = false;
 });
 
-export const startNotificationWorker = async () => {
-  console.log("🚀 Notification Worker is polling for messages...");
+export const startPaymentWorker = async (): Promise<void> => {
+  console.log("💳 Payment Worker started, polling for orders...");
 
   while (running) {
     try {
@@ -37,34 +38,29 @@ export const startNotificationWorker = async () => {
       if (response.Messages) {
         for (const message of response.Messages) {
           const body = JSON.parse(message.Body!);
-          const data = JSON.parse(body.Message);
+          const orderData: OrderCreatedPayload = JSON.parse(body.Message);
 
-          console.log(
-            `📩 Notification received for Order #${data.orderId} — status: ${data.status}`,
-          );
+          console.log(`📩 OrderCreated received for Order #${orderData.id}`);
 
-          try {
-            await emailProvider.sendOrderConfirmation(data.orderId, data.status);
-          } catch (emailError) {
-            console.error(
-              `❌ Failed to send email for Order #${data.orderId}:`,
-              emailError,
-            );
-          }
+          const record = await PaymentService.processPayment(orderData);
+
+          await publishPaymentProcessed({ orderId: record.orderId, status: record.status });
 
           await sqsClient.send(
             new DeleteMessageCommand({
               QueueUrl: config.sqs.queueUrl,
-              ReceiptHandle: message.ReceiptHandle,
+              ReceiptHandle: message.ReceiptHandle!,
             }),
           );
+
+          console.log(`✅ Order #${orderData.id} payment processed and message deleted`);
         }
       }
     } catch (error) {
-      console.error("❌ Notification Worker error:", error);
+      console.error("❌ Payment Worker error:", error);
       await new Promise((res) => setTimeout(res, 5000));
     }
   }
 
-  console.log("✅ Notification Worker stopped cleanly.");
+  console.log("✅ Payment Worker stopped cleanly.");
 };
