@@ -1,6 +1,6 @@
 import AWS from "aws-sdk";
 import { InventoryService } from "../services/inventory.services";
-import { publishInventoryEvent } from "../events/inventory-publisher";
+import { publishInventoryEvent, InventoryItem } from "../events/inventory-publisher";
 
 // הגדרת ה-SQS Client
 const sqs = new AWS.SQS({ region: process.env.AWS_REGION || "us-east-1" });
@@ -55,19 +55,22 @@ export const startInventoryWorker = async () => {
                 `📉 Processing order with ${orderData.items.length} items...`,
               );
 
+              const updatedItems: InventoryItem[] = [];
               for (const item of orderData.items) {
                 if (item.productId && item.quantity) {
                   console.log(
                     `   -> Updating stock for: ${item.productId} (-${item.quantity})`,
                   );
-                  await InventoryService.updateInventory(
+                  const result = await InventoryService.updateInventory(
                     item.productId,
                     item.quantity,
                   );
+                  const newStock = result.Attributes?.stock ?? 0;
+                  updatedItems.push({ productId: item.productId, newStock });
                 }
               }
 
-              await publishInventoryEvent(orderId, "COMPLETED");
+              await publishInventoryEvent(orderId, "COMPLETED", updatedItems);
               console.log(
                 `✅ Order #${orderId} inventory updated and confirmed.`,
               );

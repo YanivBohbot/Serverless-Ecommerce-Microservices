@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+bash.exe.stackdump
+
+# Editor
+.vscode/
+.idea/
+
+# Claude Code local files
+.claude/
+skills-lock.json
